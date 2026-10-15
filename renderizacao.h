@@ -30,4 +30,10 @@ void aguardar_proximo_quadro(unsigned int atraso_milissegundos);
 */
 void finalizar_animacao_terminal(void);
 
+/*
+    Salva uma matriz como imagem PBM textual. Celulas vivas sao gravadas em
+    preto e celulas mortas em branco. Retorna 1 em caso de sucesso.
+*/
+int salvar_matriz_pbm(const char *caminho_arquivo, int **matriz, int n, int m);
+
 #endif

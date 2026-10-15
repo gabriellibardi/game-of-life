@@ -12,6 +12,7 @@
 
 typedef struct {
     const char *caminho_arquivo;
+    const char *caminho_saida;
     int deve_imprimir_matrizes;
     int deve_animar;
     unsigned int atraso_milissegundos;
@@ -48,6 +49,7 @@ static void exibir_ajuda(const char *nome_programa) {
     printf("  --sem-impressao  Nao exibe as matrizes inicial e final fora da animacao.\n");
     printf("  --animar         Exibe todas as geracoes no terminal.\n");
     printf("  --atraso MS      Define o intervalo da animacao (0 a 60000 ms).\n");
+    printf("  --saida ARQUIVO  Salva o estado final como uma imagem PBM.\n");
     printf("  --ajuda, -h      Exibe esta mensagem.\n");
 }
 
@@ -74,6 +76,7 @@ static int converter_atraso(const char *texto, unsigned int *atraso_milissegundo
 */
 static int processar_argumentos(int argc, char *argv[], OpcoesExecucao *opcoes) {
     opcoes->caminho_arquivo = NULL;
+    opcoes->caminho_saida = NULL;
     opcoes->deve_imprimir_matrizes = 1;
     opcoes->deve_animar = 0;
     opcoes->atraso_milissegundos = ATRASO_PADRAO_MS;
@@ -91,6 +94,13 @@ static int processar_argumentos(int argc, char *argv[], OpcoesExecucao *opcoes) 
                 return 0;
             }
             atraso_foi_informado = 1;
+            indice++;
+        } else if (strcmp(argv[indice], "--saida") == 0) {
+            if (indice + 1 >= argc || argv[indice + 1][0] == '-') {
+                fprintf(stderr, "Erro: --saida exige o caminho do arquivo PBM.\n");
+                return 0;
+            }
+            opcoes->caminho_saida = argv[indice + 1];
             indice++;
         } else if (argv[indice][0] == '-') {
             fprintf(stderr, "Erro: opcao desconhecida: %s\n", argv[indice]);
@@ -201,6 +211,14 @@ int main(int argc, char *argv[]) {
         imprimir_matriz(matriz_atual, n, m);
     }
 
+    if (opcoes.caminho_saida != NULL) {
+        if (!salvar_matriz_pbm(opcoes.caminho_saida, matriz_atual, n, m)) {
+            liberar_matriz(matriz_atual, n);
+            liberar_matriz(matriz_proxima, n);
+            return EXIT_FAILURE;
+        }
+        printf("Imagem final salva em: %s\n", opcoes.caminho_saida);
+    }
 
     liberar_matriz(matriz_atual, n);
     liberar_matriz(matriz_proxima, n);

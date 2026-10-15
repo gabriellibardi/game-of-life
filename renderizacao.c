@@ -72,3 +72,34 @@ void finalizar_animacao_terminal(void) {
     printf("\033[0m\033[?25h\n");
     fflush(stdout);
 }
+
+int salvar_matriz_pbm(const char *caminho_arquivo, int **matriz, int n, int m) {
+    FILE *arquivo = fopen(caminho_arquivo, "w");
+    if (arquivo == NULL) {
+        perror("Erro ao criar a imagem PBM");
+        return 0;
+    }
+
+    int escrita_valida = fprintf(arquivo, "P1\n%d %d\n", m, n) >= 0;
+
+    for (int i = 0; i < n && escrita_valida; i++) {
+        for (int j = 0; j < m; j++) {
+            char separador = j == m - 1 ? '\n' : ' ';
+            if (fprintf(arquivo, "%d%c", matriz[i][j] == 1 ? 1 : 0, separador) < 0) {
+                escrita_valida = 0;
+                break;
+            }
+        }
+    }
+
+    if (fclose(arquivo) != 0) {
+        escrita_valida = 0;
+    }
+
+    if (!escrita_valida) {
+        fprintf(stderr, "Erro ao escrever a imagem PBM em '%s'.\n", caminho_arquivo);
+        return 0;
+    }
+
+    return 1;
+}
