@@ -1,60 +1,61 @@
 # Compilador e flags da versao sequencial
 CC = gcc
+CPPFLAGS = -I.
 CFLAGS = -std=c11 -Wall -Wextra -Wpedantic -O2
+DEPFLAGS = -MMD -MP
 LDFLAGS =
+DEBUG_CFLAGS = -std=c11 -Wall -Wextra -Wpedantic -O0 -g3 -fsanitize=address,undefined
+DEBUG_LDFLAGS = -fsanitize=address,undefined
 
-# Nome do executavel final
+# Nomes dos executaveis
 TARGET = jogo_da_vida
+DEBUG_TARGET = jogo_da_vida_debug
 TEST_TARGET = testes/teste_logica
 
-# Arquivos-fonte e objetos
+# Arquivos-fonte, cabecalhos, objetos e dependencias geradas automaticamente
 SRCS = main.c entrada.c matriz.c logica.c renderizacao.c tempo.c
+HEADERS = entrada.h matriz.h logica.h renderizacao.h tempo.h
 OBJS = $(SRCS:.c=.o)
+DEPS = $(OBJS:.o=.d)
 TEST_SRCS = testes/teste_logica.c entrada.c matriz.c logica.c
 
 # Arquivo de entrada padrao para o alvo 'make run' (pode ser sobrescrito na linha de comando)
 ARQUIVO ?= entradas/blinker.txt
+ARGS ?=
 
-.PHONY: all clean run test
+.PHONY: all clean debug run test
 
 # Regra padrao: compila o executavel
 all: $(TARGET)
 
 # Ligacao (linking) dos arquivos objeto para gerar o executavel
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
+	$(CC) $(LDFLAGS) -o $(TARGET) $(OBJS)
 
-# Dependencias explicitas dos cabecalhos (.h) para recompilar caso sejam alterados
-main.o: main.c entrada.h matriz.h logica.h renderizacao.h tempo.h
-	$(CC) $(CFLAGS) -c main.c -o main.o
+# Regra generica de compilacao, incluindo arquivos .d para dependencias de cabecalhos
+%.o: %.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
 
-entrada.o: entrada.c entrada.h matriz.h
-	$(CC) $(CFLAGS) -c entrada.c -o entrada.o
+# Gera um executavel separado com simbolos de depuracao e sanitizadores
+debug: $(DEBUG_TARGET)
 
-matriz.o: matriz.c matriz.h
-	$(CC) $(CFLAGS) -c matriz.c -o matriz.o
-
-logica.o: logica.c logica.h matriz.h
-	$(CC) $(CFLAGS) -c logica.c -o logica.o
-
-renderizacao.o: renderizacao.c renderizacao.h
-	$(CC) $(CFLAGS) -c renderizacao.c -o renderizacao.o
-
-tempo.o: tempo.c tempo.h
-	$(CC) $(CFLAGS) -c tempo.c -o tempo.o
+$(DEBUG_TARGET): $(SRCS) $(HEADERS)
+	$(CC) $(CPPFLAGS) $(DEBUG_CFLAGS) -o $(DEBUG_TARGET) $(SRCS) $(DEBUG_LDFLAGS)
 
 # Executa o programa passando um arquivo da pasta 'entradas/'
-# Uso: make run ARQUIVO=entradas/meu_teste.txt
+# Uso: make run ARQUIVO=entradas/meu_teste.txt ARGS="--sem-impressao"
 run: $(TARGET)
-	./$(TARGET) $(ARQUIVO)
+	./$(TARGET) $(ARQUIVO) $(ARGS)
 
 # Compila e executa os testes automatizados da versao sequencial
 test: $(TEST_TARGET)
 	./$(TEST_TARGET)
 
 $(TEST_TARGET): $(TEST_SRCS) entrada.h matriz.h logica.h
-	$(CC) $(CFLAGS) -I. -o $(TEST_TARGET) $(TEST_SRCS) $(LDFLAGS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $(TEST_TARGET) $(TEST_SRCS) $(LDFLAGS)
 
-# Remove os arquivos objeto (.o) e o executavel
+# Remove os objetos, dependencias e executaveis gerados
 clean:
-	rm -f $(OBJS) $(TARGET) $(TEST_TARGET)
+	rm -f $(OBJS) $(DEPS) $(TARGET) $(DEBUG_TARGET) $(TEST_TARGET)
+
+-include $(DEPS)
