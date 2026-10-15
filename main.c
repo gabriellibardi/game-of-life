@@ -6,6 +6,7 @@
 #include "logica.h"
 #include "matriz.h"
 #include "renderizacao.h"
+#include "tempo.h"
 
 #define ATRASO_PADRAO_MS 200U
 #define ATRASO_MAXIMO_MS 60000UL
@@ -187,6 +188,9 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    double tempo_simulacao = 0.0;
+    int tempo_foi_medido = 0;
+
     if (opcoes.deve_animar) {
         if (!simular_com_animacao(
                 &matriz_atual, &matriz_proxima, n, m, geracoes,
@@ -203,10 +207,25 @@ int main(int argc, char *argv[]) {
             imprimir_matriz(matriz_atual, n, m);
         }
 
-        simular_sequencial(&matriz_atual, &matriz_proxima, n, m, geracoes);
+        double inicio_simulacao;
+        double fim_simulacao;
+        if (obter_tempo_monotonico(&inicio_simulacao)) {
+            simular_sequencial(&matriz_atual, &matriz_proxima, n, m, geracoes);
+            if (obter_tempo_monotonico(&fim_simulacao)) {
+                tempo_simulacao = fim_simulacao - inicio_simulacao;
+                tempo_foi_medido = 1;
+            }
+        } else {
+            simular_sequencial(&matriz_atual, &matriz_proxima, n, m, geracoes);
+        }
     }
 
     printf("\nEstado final apos %d geracoes - Celulas vivas: %d\n", geracoes, contar_celulas_vivas(matriz_atual, n, m));
+    if (tempo_foi_medido) {
+        printf("Tempo da simulacao sequencial: %.9f s\n", tempo_simulacao);
+    } else if (opcoes.deve_animar) {
+        printf("Tempo nao medido: desative --animar para avaliar o desempenho.\n");
+    }
     if (!opcoes.deve_animar && opcoes.deve_imprimir_matrizes) {
         imprimir_matriz(matriz_atual, n, m);
     }
