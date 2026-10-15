@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    printf("Dimensoes: %d x %d | Geracoees: %d\n", n, m, geracoes);
+    printf("Dimensoes: %d x %d | Geracoes: %d\n", n, m, geracoes);
     printf("Estado inicial (t0) - Celulas vivas: %d\n", contar_celulas_vivas(matriz_atual, n, m));
     imprimir_matriz(matriz_atual, n, m);
 

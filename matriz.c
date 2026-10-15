@@ -1,16 +1,27 @@
 #include "matriz.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 int **alocar_matriz(int n, int m) {
-    int **matriz = (int **)malloc(n * sizeof(int *));
+    if (n <= 0 || m <= 0) {
+        fprintf(stderr, "Erro: as dimensoes da matriz devem ser positivas.\n");
+        return NULL;
+    }
+
+    if ((size_t)n > SIZE_MAX / sizeof(int *) || (size_t)m > SIZE_MAX / sizeof(int)) {
+        fprintf(stderr, "Erro: dimensao da matriz excede o limite de alocacao.\n");
+        return NULL;
+    }
+
+    int **matriz = malloc((size_t)n * sizeof(int *));
     if (matriz == NULL) {
         perror("Erro ao alocar vetor de linhas da matriz");
         return NULL;
     }
 
     for (int i = 0; i < n; i++) {
-        matriz[i] = (int *)calloc(m, sizeof(int));
+        matriz[i] = calloc((size_t)m, sizeof(int));
         if (matriz[i] == NULL) {
             perror("Erro ao alocar colunas da matriz");
             for (int k = 0; k < i; k++) {

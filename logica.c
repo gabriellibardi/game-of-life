@@ -59,7 +59,3 @@ void simular_sequencial(int ***matriz_atual, int ***matriz_proxima, int n, int m
         trocar_matrizes(matriz_atual, matriz_proxima);
     }
 }
-
-void simular_paralelizado() {
-    return;
-}

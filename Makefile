@@ -1,7 +1,7 @@
-# Compilador e flags (ja inclui -pthread para a etapa de paralelizacao)
+# Compilador e flags da versao sequencial
 CC = gcc
-CFLAGS = -Wall -Wextra -O2 -pthread
-LDFLAGS = -pthread
+CFLAGS = -std=c11 -Wall -Wextra -Wpedantic -O2
+LDFLAGS =
 
 # Nome do executavel final
 TARGET = jogo_da_vida
