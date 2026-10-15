@@ -8,7 +8,7 @@ TARGET = jogo_da_vida
 TEST_TARGET = testes/teste_logica
 
 # Arquivos-fonte e objetos
-SRCS = main.c entrada.c matriz.c logica.c
+SRCS = main.c entrada.c matriz.c logica.c renderizacao.c
 OBJS = $(SRCS:.c=.o)
 TEST_SRCS = testes/teste_logica.c entrada.c matriz.c logica.c
 
@@ -25,7 +25,7 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
 
 # Dependencias explicitas dos cabecalhos (.h) para recompilar caso sejam alterados
-main.o: main.c entrada.h matriz.h logica.h
+main.o: main.c entrada.h matriz.h logica.h renderizacao.h
 	$(CC) $(CFLAGS) -c main.c -o main.o
 
 entrada.o: entrada.c entrada.h matriz.h
@@ -36,6 +36,9 @@ matriz.o: matriz.c matriz.h
 
 logica.o: logica.c logica.h matriz.h
 	$(CC) $(CFLAGS) -c logica.c -o logica.o
+
+renderizacao.o: renderizacao.c renderizacao.h
+	$(CC) $(CFLAGS) -c renderizacao.c -o renderizacao.o
 
 # Executa o programa passando um arquivo da pasta 'entradas/'
 # Uso: make run ARQUIVO=entradas/meu_teste.txt
