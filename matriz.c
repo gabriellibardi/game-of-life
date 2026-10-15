@@ -49,6 +49,18 @@ void trocar_matrizes(int ***atual, int ***proxima) {
     *proxima = temp;
 }
 
+int matrizes_iguais(int **primeira, int **segunda, int n, int m) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < m; j++) {
+            if (primeira[i][j] != segunda[i][j]) {
+                return 0;
+            }
+        }
+    }
+
+    return 1;
+}
+
 void imprimir_matriz(int **matriz, int n, int m) {
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < m; j++) {

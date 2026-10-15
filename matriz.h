@@ -19,6 +19,12 @@ void liberar_matriz(int **matriz, int n);
 void trocar_matrizes(int ***atual, int ***proxima);
 
 /*
+    Compara duas matrizes de mesmas dimensoes, celula por celula. Retorna 1 se
+    todos os valores forem iguais e 0 ao encontrar a primeira diferenca.
+*/
+int matrizes_iguais(int **primeira, int **segunda, int n, int m);
+
+/*
     Funcao auxiliar para visualizar o estado do tabuleiro no terminal.
 */
 void imprimir_matriz(int **matriz, int n, int m);
