@@ -5,15 +5,17 @@ LDFLAGS =
 
 # Nome do executavel final
 TARGET = jogo_da_vida
+TEST_TARGET = testes/teste_logica
 
 # Arquivos-fonte e objetos
 SRCS = main.c entrada.c matriz.c logica.c
 OBJS = $(SRCS:.c=.o)
+TEST_SRCS = testes/teste_logica.c entrada.c matriz.c logica.c
 
 # Arquivo de entrada padrao para o alvo 'make run' (pode ser sobrescrito na linha de comando)
 ARQUIVO ?= entradas/blinker.txt
 
-.PHONY: all clean run
+.PHONY: all clean run test
 
 # Regra padrao: compila o executavel
 all: $(TARGET)
@@ -40,6 +42,13 @@ logica.o: logica.c logica.h matriz.h
 run: $(TARGET)
 	./$(TARGET) $(ARQUIVO)
 
+# Compila e executa os testes automatizados da versao sequencial
+test: $(TEST_TARGET)
+	./$(TEST_TARGET)
+
+$(TEST_TARGET): $(TEST_SRCS) entrada.h matriz.h logica.h
+	$(CC) $(CFLAGS) -I. -o $(TEST_TARGET) $(TEST_SRCS) $(LDFLAGS)
+
 # Remove os arquivos objeto (.o) e o executavel
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJS) $(TARGET) $(TEST_TARGET)
