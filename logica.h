@@ -13,6 +13,12 @@ int contar_vizinhos_vivos(int **matriz, int n, int m, int linha, int coluna);
 void calcular_proxima_geracao(int **atual, int **proxima, int n, int m, int linha_inicio, int linha_fim);
 
 /*
+    Avanca a simulacao em uma geracao. Calcula todos os novos estados na matriz
+    proxima e, ao final, troca as referencias das matrizes atual e proxima.
+*/
+void avancar_uma_geracao(int ***matriz_atual, int ***matriz_proxima, int n, int m);
+
+/*
     Conta o total de celulas vivas no tabuleiro.
 */
 int contar_celulas_vivas(int **matriz, int n, int m);

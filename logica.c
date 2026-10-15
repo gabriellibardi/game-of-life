@@ -43,6 +43,11 @@ void calcular_proxima_geracao(int **atual, int **proxima, int n, int m, int linh
     }
 }
 
+void avancar_uma_geracao(int ***matriz_atual, int ***matriz_proxima, int n, int m) {
+    calcular_proxima_geracao(*matriz_atual, *matriz_proxima, n, m, 0, n);
+    trocar_matrizes(matriz_atual, matriz_proxima);
+}
+
 int contar_celulas_vivas(int **matriz, int n, int m) {
     int total = 0;
     for (int i = 0; i < n; i++) {
@@ -55,7 +60,6 @@ int contar_celulas_vivas(int **matriz, int n, int m) {
 
 void simular_sequencial(int ***matriz_atual, int ***matriz_proxima, int n, int m, int geracoes) {
     for (int g = 0; g < geracoes; g++) {
-        calcular_proxima_geracao(*matriz_atual, *matriz_proxima, n, m, 0, n);
-        trocar_matrizes(matriz_atual, matriz_proxima);
+        avancar_uma_geracao(matriz_atual, matriz_proxima, n, m);
     }
 }
