@@ -1,10 +1,12 @@
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "entrada.h"
 #include "logica.h"
 #include "matriz.h"
+#include "paralelo.h"
 #include "renderizacao.h"
 #include "tempo.h"
 
@@ -17,6 +19,9 @@ typedef struct {
     int deve_imprimir_matrizes;
     int deve_animar;
     unsigned int atraso_milissegundos;
+    int deve_paralelizar; /* Seleciona o calculo com pthreads. */
+    int deve_verificar;   /* Executa a outra versao e compara todas as celulas. */
+    int numero_threads;   /* Quantidade configurada para a versao paralela. */
 } OpcoesExecucao;
 
 /*
@@ -47,6 +52,9 @@ static void exibir_ajuda(const char *nome_programa) {
     printf("  %s <arquivo_de_entrada> [opcoes]\n", nome_programa);
     printf("  %s --ajuda\n\n", nome_programa);
     printf("Opcoes:\n");
+    printf("  --sequencial    Executa sem threads (padrao).\n");
+    printf("  --threads N     Executa com pthreads; N deve ser de 1 ao numero de linhas.\n");
+    printf("  --verificar     Compara as versoes fora do intervalo cronometrado.\n");
     printf("  --sem-impressao  Nao exibe as matrizes inicial e final fora da animacao.\n");
     printf("  --animar         Exibe todas as geracoes no terminal.\n");
     printf("  --atraso MS      Define o intervalo da animacao (0 a 60000 ms).\n");
@@ -71,6 +79,20 @@ static int converter_atraso(const char *texto, unsigned int *atraso_milissegundo
     return 1;
 }
 
+/* Converte uma quantidade positiva de threads sem aceitar texto extra. */
+static int converter_threads(const char *texto, int *numero_threads) {
+    char *fim_conversao; 
+    long quantidade;  
+    errno = 0;
+    quantidade = strtol(texto, &fim_conversao, 10);
+    if (*fim_conversao != '\0' || errno == ERANGE
+        || quantidade < 1 || quantidade > INT_MAX) {
+        return 0;
+    }
+    *numero_threads = (int)quantidade;
+    return 1;
+}
+
 /*
     Processa os argumentos da linha de comando e preenche as opcoes. Retorna 1
     quando os argumentos sao validos e 0 quando encontra algum erro.
@@ -81,10 +103,25 @@ static int processar_argumentos(int argc, char *argv[], OpcoesExecucao *opcoes) 
     opcoes->deve_imprimir_matrizes = 1;
     opcoes->deve_animar = 0;
     opcoes->atraso_milissegundos = ATRASO_PADRAO_MS;
-    int atraso_foi_informado = 0;
+    opcoes->deve_paralelizar = 0;
+    opcoes->deve_verificar = 0;
+    opcoes->numero_threads = 1;
+    int sequencial_explicito = 0; 
 
     for (int indice = 1; indice < argc; indice++) {
-        if (strcmp(argv[indice], "--sem-impressao") == 0) {
+        if (strcmp(argv[indice], "--sequencial") == 0) {
+            sequencial_explicito = 1;
+        } else if (strcmp(argv[indice], "--threads") == 0) {
+            if (indice + 1 >= argc
+                || !converter_threads(argv[indice + 1], &opcoes->numero_threads)) {
+                fprintf(stderr, "Erro: --threads exige um inteiro positivo ate %d.\n", INT_MAX);
+                return 0;
+            }
+            opcoes->deve_paralelizar = 1;
+            indice++;
+        } else if (strcmp(argv[indice], "--verificar") == 0) {
+            opcoes->deve_verificar = 1;
+        } else if (strcmp(argv[indice], "--sem-impressao") == 0) {
             opcoes->deve_imprimir_matrizes = 0;
         } else if (strcmp(argv[indice], "--animar") == 0) {
             opcoes->deve_animar = 1;
@@ -94,7 +131,6 @@ static int processar_argumentos(int argc, char *argv[], OpcoesExecucao *opcoes) 
                 fprintf(stderr, "Erro: --atraso exige um valor inteiro entre 0 e 60000.\n");
                 return 0;
             }
-            atraso_foi_informado = 1;
             indice++;
         } else if (strcmp(argv[indice], "--saida") == 0) {
             if (indice + 1 >= argc || argv[indice + 1][0] == '-') {
@@ -119,12 +155,63 @@ static int processar_argumentos(int argc, char *argv[], OpcoesExecucao *opcoes) 
         return 0;
     }
 
-    if (atraso_foi_informado && !opcoes->deve_animar) {
-        fprintf(stderr, "Erro: --atraso deve ser usado junto com --animar.\n");
+    if (sequencial_explicito && opcoes->deve_paralelizar) {
+        fprintf(stderr, "Erro: --sequencial nao pode acompanhar --threads.\n");
         return 0;
     }
-
+    if (opcoes->deve_animar && (opcoes->deve_paralelizar || opcoes->deve_verificar)) {
+        fprintf(stderr, "Erro: --animar exige modo sequencial sem --verificar.\n");
+        return 0;
+    }
     return 1;
+}
+
+/*
+    Executa apenas o modo solicitado e mede seu tempo. No paralelo, a medicao
+    inclui criacao, sincronizacao e joins; leitura, copia e verificacao ficam fora.
+    Uma falha do relogio impede a medicao, mas nao repete nem cancela o calculo.
+*/
+static int executar_simulacao(int ***atual, int ***proxima, int linhas, int colunas,
+                            int geracoes, const OpcoesExecucao *opcoes,
+                            double *tempo, int *tempo_medido) {
+    double inicio; 
+    double fim;   
+    int relogio_disponivel = obter_tempo_monotonico(&inicio); 
+    *tempo_medido = 0;
+    if (opcoes->deve_paralelizar) {
+        if (!simular_paralelo(atual, proxima, linhas, colunas,
+                              geracoes, opcoes->numero_threads)) {
+            return 0;
+        }
+    } else {
+        simular_sequencial(atual, proxima, linhas, colunas, geracoes);
+    }
+    if (relogio_disponivel && obter_tempo_monotonico(&fim)) {
+        *tempo = fim - inicio;
+        *tempo_medido = 1;
+    }
+    return 1;
+}
+
+/*
+    Calcula a versao de referencia sobre uma copia independente do estado inicial.
+    Compara todas as celulas e informa se os resultados coincidem. Nao mede tempo.
+*/
+static int verificar_resultado(int **resultado, int ***referencia, int ***auxiliar,
+                              int linhas, int colunas, int geracoes,
+                              const OpcoesExecucao *opcoes) {
+    if (opcoes->deve_paralelizar) {
+        simular_sequencial(referencia, auxiliar, linhas, colunas, geracoes);
+    } else if (!simular_paralelo(referencia, auxiliar, linhas, colunas,
+                                 geracoes, opcoes->numero_threads)) {
+        return 0;
+    }
+    if (matrizes_iguais(resultado, *referencia, linhas, colunas)) {
+        printf("Verificacao: OK - resultados sequencial e paralelo identicos.\n");
+        return 1;
+    }
+    fprintf(stderr, "Verificacao: FALHOU - resultados sequencial e paralelo diferentes.\n");
+    return 0;
 }
 
 /*
@@ -146,11 +233,11 @@ static int simular_com_animacao(
         *matriz_atual, n, m, 0, geracoes, contar_celulas_vivas(*matriz_atual, n, m)
     );
 
-    for (int geracao = 1; geracao <= geracoes; geracao++) {
+    for (int geracao = 0; geracao < geracoes; geracao++) {
         aguardar_proximo_quadro(atraso_milissegundos);
         avancar_uma_geracao(matriz_atual, matriz_proxima, n, m);
         renderizar_geracao_terminal(
-            *matriz_atual, n, m, geracao, geracoes,
+            *matriz_atual, n, m, geracao + 1, geracoes,
             contar_celulas_vivas(*matriz_atual, n, m)
         );
     }
@@ -190,57 +277,75 @@ int main(int argc, char *argv[]) {
 
     double tempo_simulacao = 0.0;
     int tempo_foi_medido = 0;
+    int codigo_saida = EXIT_FAILURE; 
+    int **referencia = NULL; 
+    int **auxiliar_referencia = NULL; 
+    if (opcoes.deve_verificar) {
+        referencia = alocar_matriz(n, m);
+        auxiliar_referencia = alocar_matriz(n, m);
+        if (referencia == NULL || auxiliar_referencia == NULL) {
+            goto liberar_recursos;
+        }
+        for (int linha = 0; linha < n; linha++) { 
+            for (int coluna = 0; coluna < m; coluna++) { 
+                referencia[linha][coluna] = matriz_atual[linha][coluna];
+            }
+        }
+    }
 
     if (opcoes.deve_animar) {
         if (!simular_com_animacao(
                 &matriz_atual, &matriz_proxima, n, m, geracoes,
                 opcoes.atraso_milissegundos)) {
-            liberar_matriz(matriz_atual, n);
-            liberar_matriz(matriz_proxima, n);
-            return EXIT_FAILURE;
+            goto liberar_recursos;
         }
     } else {
         printf("Dimensoes: %d x %d | Geracoes: %d\n", n, m, geracoes);
+        printf("Modo: %s | Threads: %d\n", opcoes.deve_paralelizar ? "paralelo" : "sequencial",
+               opcoes.deve_paralelizar ? opcoes.numero_threads : 1);
         printf("Estado inicial (t0) - Celulas vivas: %d\n",
                contar_celulas_vivas(matriz_atual, n, m));
         if (opcoes.deve_imprimir_matrizes) {
             imprimir_matriz(matriz_atual, n, m);
         }
 
-        double inicio_simulacao;
-        double fim_simulacao;
-        if (obter_tempo_monotonico(&inicio_simulacao)) {
-            simular_sequencial(&matriz_atual, &matriz_proxima, n, m, geracoes);
-            if (obter_tempo_monotonico(&fim_simulacao)) {
-                tempo_simulacao = fim_simulacao - inicio_simulacao;
-                tempo_foi_medido = 1;
-            }
-        } else {
-            simular_sequencial(&matriz_atual, &matriz_proxima, n, m, geracoes);
+        if (!executar_simulacao(&matriz_atual, &matriz_proxima, n, m, geracoes,
+                                &opcoes, &tempo_simulacao, &tempo_foi_medido)) {
+            goto liberar_recursos;
         }
     }
 
     printf("\nEstado final apos %d geracoes - Celulas vivas: %d\n", geracoes, contar_celulas_vivas(matriz_atual, n, m));
     if (tempo_foi_medido) {
-        printf("Tempo da simulacao sequencial: %.9f s\n", tempo_simulacao);
+        printf("Tempo da simulacao %s: %.9f s\n",
+               opcoes.deve_paralelizar ? "paralela" : "sequencial", tempo_simulacao);
     } else if (opcoes.deve_animar) {
         printf("Tempo nao medido: desative --animar para avaliar o desempenho.\n");
+    } else {
+        printf("Tempo nao medido: falha ao consultar o relogio.\n");
     }
     if (!opcoes.deve_animar && opcoes.deve_imprimir_matrizes) {
         imprimir_matriz(matriz_atual, n, m);
     }
 
+    if (opcoes.deve_verificar
+        && !verificar_resultado(matriz_atual, &referencia, &auxiliar_referencia,
+                                n, m, geracoes, &opcoes)) {
+        goto liberar_recursos;
+    }
     if (opcoes.caminho_saida != NULL) {
         if (!salvar_matriz_pbm(opcoes.caminho_saida, matriz_atual, n, m)) {
-            liberar_matriz(matriz_atual, n);
-            liberar_matriz(matriz_proxima, n);
-            return EXIT_FAILURE;
+            goto liberar_recursos;
         }
         printf("Imagem final salva em: %s\n", opcoes.caminho_saida);
     }
 
+    codigo_saida = EXIT_SUCCESS;
+liberar_recursos:
+    liberar_matriz(referencia, n);
+    liberar_matriz(auxiliar_referencia, n);
     liberar_matriz(matriz_atual, n);
     liberar_matriz(matriz_proxima, n);
 
-    return EXIT_SUCCESS;
+    return codigo_saida;
 }

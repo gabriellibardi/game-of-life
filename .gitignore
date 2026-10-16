@@ -1,6 +1,8 @@
 jogo_da_vida
 jogo_da_vida_debug
 testes/teste_logica
+__pycache__/
+resultados/entradas/
 
 # Prerequisites
 *.d

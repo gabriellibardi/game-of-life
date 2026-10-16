@@ -1,0 +1,65 @@
+{
+  "inicio_utc": "2026-10-16T20:07:30.578590+00:00",
+  "sistema": "Linux-5.15.153.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "python": "3.12.3",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13400F",
+  "cpus_logicas": 16,
+  "afinidade": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "cgroup_cpu_max": null,
+  "executavel_sha256": "374a0b97aee6d9cad55e1382c21666bdec1d4afff8bd3ff008d897c4beb5119a",
+  "parametros": {
+    "executavel": "jogo_da_vida",
+    "saida": "resultados",
+    "tamanhos": [
+      128,
+      512,
+      1024
+    ],
+    "threads": [
+      1,
+      2,
+      4,
+      8
+    ],
+    "geracoes": 100,
+    "repeticoes": 5,
+    "densidade": 0.3,
+    "semente": 42
+  },
+  "medicao": "CLOCK_MONOTONIC no C; inclui equipe pthreads; exclui E/S e verificacao",
+  "entradas": [
+    {
+      "arquivo": "entradas/tabuleiro_128.txt",
+      "vivas": 4860,
+      "sha256": "a2903c097c4857a6547e1ee78c3cf43aab8023a1d2d05bc139f0b2752fd2b344"
+    },
+    {
+      "arquivo": "entradas/tabuleiro_512.txt",
+      "vivas": 78459,
+      "sha256": "f80c95975d8782c1956f57e97ad2b4b233c1e6da0cdfe4dd929cc20d41e6ecc9"
+    },
+    {
+      "arquivo": "entradas/tabuleiro_1024.txt",
+      "vivas": 314147,
+      "sha256": "34586e618ab7756af41bacb00ef22419a344114b1198bfbb99a82a36d2b9fca5"
+    }
+  ],
+  "fim_utc": "2026-10-16T20:08:02.573832+00:00"
+}

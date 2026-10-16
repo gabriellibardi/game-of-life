@@ -145,6 +145,12 @@ int **ler_arquivo_entrada(const char *caminho_arquivo, int *n, int *m, int *gera
         }
     }
 
+    if (ferror(arquivo)) {
+        fprintf(stderr, "Erro durante a leitura do arquivo de entrada.\n");
+        liberar_matriz(matriz_t0, *n);
+        fclose(arquivo);
+        return NULL;
+    }
     fclose(arquivo);
     return matriz_t0;
 }
