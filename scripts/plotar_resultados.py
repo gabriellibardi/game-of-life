@@ -7,7 +7,7 @@ from reportlab.graphics import renderSVG
 from reportlab.graphics.charts.barcharts import VerticalBarChart
 from reportlab.graphics.charts.legends import Legend
 from reportlab.graphics.charts.lineplots import LinePlot
-from reportlab.graphics.shapes import Drawing, String
+from reportlab.graphics.shapes import Drawing, Rect, String
 from reportlab.lib.colors import HexColor
 
 CORES = [HexColor(c) for c in ("#235789", "#e07a35", "#32936f", "#8157a5", "#c34f64")]
@@ -15,6 +15,7 @@ CORES = [HexColor(c) for c in ("#235789", "#e07a35", "#32936f", "#8157a5", "#c34
 
 def base(titulo, subtitulo, eixo_y):
     desenho = Drawing(760, 410)
+    desenho.add(Rect(0, 0, 760, 410, fillColor=HexColor("#ffffff"), strokeColor=None))
     desenho.add(String(65, 383, titulo, fontName="Helvetica-Bold", fontSize=17))
     desenho.add(String(65, 361, subtitulo, fontSize=10, fillColor=HexColor("#555555")))
     desenho.add(String(14, 220, eixo_y, angle=90, fontSize=11))
